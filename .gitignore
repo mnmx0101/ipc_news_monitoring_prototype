@@ -49,6 +49,7 @@ build/
 data/raw/*
 data/interim/*
 data/processed/*
+!data/processed/all_clean_df.csv
 data/database/*.db
 !data/raw/.gitkeep
 !data/interim/.gitkeep
