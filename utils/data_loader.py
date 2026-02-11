@@ -21,6 +21,9 @@ CORE_COLUMNS = [
 DEFAULT_CSV_PATH = "data/processed/all_clean_df.csv"
 DEFAULT_PARQUET_PATH = "data/processed/all_clean_df.parquet"
 
+# External data URL (GitHub Releases)
+DATA_URL = "https://github.com/mnmx0101/ipc_news_monitoring_prototype/releases/download/v1.0-data/all_clean_df.parquet"
+
 # Check which file exists (prefer Parquet)
 if Path(DEFAULT_PARQUET_PATH).exists():
     DATA_PATH = os.getenv("DATA_PATH", DEFAULT_PARQUET_PATH)
@@ -81,18 +84,20 @@ def load_data(data_path=DATA_PATH):
     Supports both CSV and Parquet formats. Parquet is preferred for deployment
     due to smaller file size and faster loading.
     """
+    
     try:
         # Auto-detect format based on file extension
-        if data_path.endswith('.parquet'):
+        data_path_str = str(data_path)
+        if data_path_str.endswith('.parquet'):
             df = pd.read_parquet(data_path)
-        elif data_path.endswith('.csv'):
-            df = pd.read_csv(data_path)
+        elif data_path_str.endswith('.csv'):
+            df = pd.read_csv(data_path, low_memory=False)
         else:
             # Try Parquet first, then CSV
             try:
                 df = pd.read_parquet(data_path)
             except:
-                df = pd.read_csv(data_path)
+                df = pd.read_csv(data_path, low_memory=False)
     except FileNotFoundError:
         st.error(f"❌ Data file not found at: `{data_path}`")
         st.info("💡 Tip: If deploying, convert CSV to Parquet using `python scripts/convert_to_parquet.py`")
