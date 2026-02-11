@@ -1,5 +1,6 @@
 """
 Shared data loading utilities for the News Analytics Platform.
+Downloads data from GitHub Releases on first run.
 """
 
 import os
@@ -77,13 +78,58 @@ CATEGORIES = {
 }
 
 
+@st.cache_data(show_spinner=False)
+def download_data_if_needed():
+    """Download data file from GitHub Releases if it doesn't exist locally."""
+    
+    data_path = Path(DEFAULT_PARQUET_PATH)
+    
+    # Check if file already exists
+    if data_path.exists():
+        return data_path
+    
+    # Download the file
+    try:
+        import requests
+        
+        with st.spinner("📥 Downloading data file (first time only, ~90 MB)..."):
+            # Create directory if it doesn't exist
+            data_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Download with streaming
+            response = requests.get(DATA_URL, stream=True)
+            response.raise_for_status()
+            
+            with open(data_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            
+            st.success("✅ Data file downloaded successfully!")
+            
+    except Exception as e:
+        st.error(f"❌ Failed to download data file from GitHub Releases")
+        st.error(f"**Error**: {str(e)}")
+        st.info(f"💡 URL: {DATA_URL}")
+        st.stop()
+    
+    return data_path
+
+
 @st.cache_data
-def load_data(data_path=DATA_PATH):
+def load_data(data_path=None):
     """Load and preprocess the news dataset.
     
+    Downloads from GitHub Releases on first run if not available locally.
     Supports both CSV and Parquet formats. Parquet is preferred for deployment
     due to smaller file size and faster loading.
     """
+    
+    # Download data if needed (only runs once, then cached)
+    if data_path is None:
+        data_path = download_data_if_needed()
+    else:
+        data_path = Path(data_path)
     
     try:
         # Auto-detect format based on file extension
@@ -101,14 +147,14 @@ def load_data(data_path=DATA_PATH):
     except FileNotFoundError:
         st.error(f"❌ Data file not found at: `{data_path}`")
         st.info("💡 Tip: If deploying, convert CSV to Parquet using `python scripts/convert_to_parquet.py`")
-        st.stop()  # Stop execution to show error clearly
+        st.stop()
     except Exception as e:
         st.error(f"❌ Error loading data from `{data_path}`")
         st.error(f"**Error type**: {type(e).__name__}")
         st.error(f"**Error message**: {str(e)}")
         import traceback
         st.code(traceback.format_exc())
-        st.stop()  # Stop execution to show error clearly
+        st.stop()
 
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df["adm1_name_final"] = df["adm1_name_final"].fillna("Unknown Region")
