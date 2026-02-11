@@ -96,10 +96,14 @@ def load_data(data_path=DATA_PATH):
     except FileNotFoundError:
         st.error(f"❌ Data file not found at: `{data_path}`")
         st.info("💡 Tip: If deploying, convert CSV to Parquet using `python scripts/convert_to_parquet.py`")
-        return pd.DataFrame(columns=CORE_COLUMNS)
+        st.stop()  # Stop execution to show error clearly
     except Exception as e:
-        st.error(f"Error loading data: {e}")
-        return pd.DataFrame(columns=CORE_COLUMNS)
+        st.error(f"❌ Error loading data from `{data_path}`")
+        st.error(f"**Error type**: {type(e).__name__}")
+        st.error(f"**Error message**: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
+        st.stop()  # Stop execution to show error clearly
 
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df["adm1_name_final"] = df["adm1_name_final"].fillna("Unknown Region")
