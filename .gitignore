@@ -49,10 +49,8 @@ build/
 data/raw/*
 data/interim/*
 data/processed/*
-# Include the optimized Parquet file for deployment (90 MB)
-!data/processed/all_clean_df.parquet
-# Exclude the large CSV file (1.8 GB - too large for GitHub)
-data/processed/all_clean_df.csv
+# All data files now use external storage (GitHub Releases)
+# No data files should be committed to Git
 data/database/*.db
 !data/raw/.gitkeep
 !data/interim/.gitkeep
