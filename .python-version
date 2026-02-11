@@ -1,0 +1,4 @@
+# Hugging Face Spaces Configuration
+# This file is optional but can help with reproducibility
+
+python_version: "3.9"
