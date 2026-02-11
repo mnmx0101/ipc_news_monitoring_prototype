@@ -17,7 +17,15 @@ CORE_COLUMNS = [
     "sentiment_label", "sentiment_score"
 ]
 
-DATA_PATH = os.getenv("DATA_PATH", "data/processed/all_clean_df.csv")
+# Auto-detect data format (prefer Parquet for deployment)
+DEFAULT_CSV_PATH = "data/processed/all_clean_df.csv"
+DEFAULT_PARQUET_PATH = "data/processed/all_clean_df.parquet"
+
+# Check which file exists (prefer Parquet)
+if Path(DEFAULT_PARQUET_PATH).exists():
+    DATA_PATH = os.getenv("DATA_PATH", DEFAULT_PARQUET_PATH)
+else:
+    DATA_PATH = os.getenv("DATA_PATH", DEFAULT_CSV_PATH)
 
 # Keyword taxonomy for article labeling
 CATEGORIES = {
@@ -68,11 +76,26 @@ CATEGORIES = {
 
 @st.cache_data
 def load_data(data_path=DATA_PATH):
-    """Load and preprocess the news dataset."""
+    """Load and preprocess the news dataset.
+    
+    Supports both CSV and Parquet formats. Parquet is preferred for deployment
+    due to smaller file size and faster loading.
+    """
     try:
-        df = pd.read_csv(data_path)
+        # Auto-detect format based on file extension
+        if data_path.endswith('.parquet'):
+            df = pd.read_parquet(data_path)
+        elif data_path.endswith('.csv'):
+            df = pd.read_csv(data_path)
+        else:
+            # Try Parquet first, then CSV
+            try:
+                df = pd.read_parquet(data_path)
+            except:
+                df = pd.read_csv(data_path)
     except FileNotFoundError:
         st.error(f"❌ Data file not found at: `{data_path}`")
+        st.info("💡 Tip: If deploying, convert CSV to Parquet using `python scripts/convert_to_parquet.py`")
         return pd.DataFrame(columns=CORE_COLUMNS)
     except Exception as e:
         st.error(f"Error loading data: {e}")
