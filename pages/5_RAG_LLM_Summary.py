@@ -96,8 +96,34 @@ def build_prompt(context_df, context_str, date_range, region_focus, topic_keywor
 
     # Build strict filtering instructions
     filter_requirements = []
+    region_instruction_detail = ""
+    
     if region_focus and region_focus.strip():
-        filter_requirements.append(f"Region/Location: **{region_focus.strip()}**")
+        region_name = region_focus.strip()
+        
+        # Check if region_focus matches an ADM1 region (case-insensitive)
+        adm1_regions = context_df['adm1_name_final'].dropna().unique()
+        matching_adm1 = None
+        for adm1 in adm1_regions:
+            if adm1.lower() == region_name.lower():
+                matching_adm1 = adm1
+                break
+        
+        # If it's an ADM1 region, get all its ADM2 counties
+        if matching_adm1:
+            counties = context_df[context_df['adm1_name_final'] == matching_adm1]['adm2_name_final'].dropna().unique()
+            counties = [c for c in counties if c != "Unknown County"]
+            
+            if len(counties) > 0:
+                county_list = ", ".join(sorted(counties))
+                filter_requirements.append(f"Region/Location: **{matching_adm1}** (including counties: {county_list})")
+                region_instruction_detail = f"\nNOTE: Articles mentioning ANY of these counties should be included: {county_list}"
+            else:
+                filter_requirements.append(f"Region/Location: **{region_name}**")
+        else:
+            # Not an ADM1 region, treat as general location
+            filter_requirements.append(f"Region/Location: **{region_name}**")
+    
     if topic_keyword and topic_keyword.strip():
         filter_requirements.append(f"Topic/Keyword: **{topic_keyword.strip()}**")
     
@@ -107,16 +133,16 @@ def build_prompt(context_df, context_str, date_range, region_focus, topic_keywor
         strict_filter_instruction = f"""
 🚨 STRICT FILTERING REQUIREMENTS 🚨
 You MUST ONLY include information that matches ALL of the following criteria:
-{filter_list}
+{filter_list}{region_instruction_detail}
 
 MATCHING RULES (FLEXIBLE):
 - Use CASE-INSENSITIVE matching (e.g., "Juba" matches "juba", "JUBA", "Juba")
 - Use PARTIAL matching (e.g., "Juba" matches "Juba County", "near Juba", "Juba area", "Juba region")
-- For regions: Check if the article text CONTAINS the region name (case-insensitive)
+- For regions: Check if the article text CONTAINS the region name OR any of the listed counties (case-insensitive)
 - For topics: Check if the article RELATES to the topic (keywords, themes, context)
 
 CRITICAL RULES:
-1. If an article does NOT contain the specified region/location name (case-insensitive), EXCLUDE it entirely.
+1. If an article does NOT contain the specified region/location name OR any listed counties (case-insensitive), EXCLUDE it entirely.
 2. If an article does NOT relate to the specified topic/keyword, EXCLUDE it entirely.
 3. Only use FACTS explicitly stated in the articles - NO speculation, NO inference, NO assumptions.
 4. If you exclude articles, you MUST list them at the end under "Excluded Articles" with brief reasons.
