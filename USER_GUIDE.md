@@ -1,4 +1,5 @@
 # South Sudan News Analytics Platform -- User Guide
+**Last Updated: 2026-02-12**
 
 **For IPC Analysts**
 
