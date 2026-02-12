@@ -69,6 +69,11 @@ For a given topic and geographic focus, use the AI-powered summary tool to produ
 
 **Purpose**: Identify states where article volume for a given topic is abnormally high.
 
+**How to Use**:
+- Use the **Region (ADM1)** selector to pick a specific state.
+- Use the **Topic** selector to choose a humanitarian category.
+- Toggle between **Static** and **Dynamic** tabs to see different threshold perspectives.
+
 **How alerts work**:
 - For each state-month combination, the article count is compared against that state's historical distribution.
 - **Normal**: The count is within 1 standard deviation of the mean.
@@ -76,11 +81,9 @@ For a given topic and geographic focus, use the AI-powered summary tool to produ
 - **Alarm-high**: The count exceeds 2 standard deviations above the mean.
 
 **Two thresholds per label**:
-The page shows side-by-side heatmaps for each topic label:
+The page shows comparative views for each topic label:
 - **Static threshold**: Mean and standard deviation are computed over the full time span. This captures absolute deviations from the long-run norm.
-- **Dynamic threshold**: Mean and standard deviation are computed over the trailing 12 months before each time point. This captures deviations relative to recent trends, which is more useful when overall article volume is growing.
-
-**Default filters**: Radio Tamazuj source, Negative sentiment, full date range. These defaults reflect the most common analytical use case: tracking negative events reported by an independent source.
+- **Dynamic threshold**: Mean and standard deviation are computed over the trailing 12 months before each time point t. This captures deviations relative to recent trends, which is more useful when overall article volume is growing.
 
 ---
 
@@ -88,10 +91,10 @@ The page shows side-by-side heatmaps for each topic label:
 
 **Purpose**: Same logic as ADM1 but at the county level for more granular monitoring.
 
-**Key differences from ADM1**:
-- Includes an ADM1 geographic filter to narrow down which counties are shown (defaults to Central Equatoria).
-- Counties labeled "Unknown County" are excluded.
-- A summary table at the bottom ranks counties by the number of alarm-high months, which helps prioritize further investigation.
+**Key features**:
+- **Cascading Filter**: Selecting a state (ADM1) in the sidebar or page selectors automatically filters the list of available counties (ADM2).
+- Includes the same Alert/Alarm logic as Page 2.
+- Summary metrics at the top update based on the specific county and topic selected.
 
 **Important note**: At the county level, article counts per month tend to be small, which makes the statistical thresholds less stable. The alert and alarm signals here are best treated as screening indicators rather than definitive flags. Use the RAG+LLM summary (Page 5) to extract deeper, region-specific insights.
 
@@ -105,29 +108,33 @@ The page shows side-by-side heatmaps for each topic label:
 1. Set your filters in the sidebar. The defaults (Radio Tamazuj, Negative sentiment, Political Instability label, Central Equatoria) are a useful starting point, but adjust them based on what you found in the earlier pages.
 2. Use the dropdown to select an article from the filtered set.
 3. The article is displayed with full metadata: date, source, region, county, topic label, sentiment classification, and a link to the original source.
-4. The cleaned text is shown by default. The original text is not displayed to respect copyright, but you can follow the link to read it on the source website.
+4. **Read Text**: The cleaned article text is displayed. You can also view the original source by following the provided link.
 
-**Tip**: Use the keyword search filter if you are looking for something specific, such as a place name or event type.
+**Technical Note**: To protect data integrity and restrict unauthorized distribution, "Download Data" buttons have been removed from all dashboard pages.
 
 ---
 
 ### Page 5: RAG+LLM Situation Summary
 
-**Purpose**: Generate an AI-written situation brief based on a filtered set of articles.
+**Purpose**: Generate a high-fidelity, AI-written situation brief based on full article text.
+
+**Advanced Features**:
+- **Full Text Analysis**: Unlike other pages that use truncated summaries, the RAG+LLM tool uses the **full content of paragraphs** for deep technical analysis.
+- **Strict Filtering**: The AI is instructed to strictly adhere to the specified Region and Topic filters. Articles not matching the criteria are excluded from the summary.
+- **ADM1 Auto-Expansion**: If you enter an ADM1 state name (e.g., "Jonglei") in the Region Focus, the system automatically detects it and instructs the AI to include all relevant sub-counties (e.g., Akobo, Bor South, Fangak) in its analysis.
 
 **Two-step process**:
 
-1. **Step 1 -- Estimate tokens and cost**: After setting your filters and configuration, click the "Estimate" button. This will show you how many articles will be analyzed, the estimated number of input and output tokens, and the approximate cost for the selected model. Review this before proceeding.
-
-2. **Step 2 -- Generate summary**: Click the "Generate" button to produce the summary. The output includes:
-   - Bullet points summarizing key findings, each citing article numbers in square brackets (e.g., [1], [3,5]).
-   - An overall summary paragraph.
-   - A reference table listing all source articles with dates, locations, labels, and links.
+1. **Step 1 -- Estimate tokens and cost**: After setting your filters and configuration, click the "Estimate" button. This will show you exactly which articles will be analyzed, the token count (using full text), and the estimated cost. Review this before proceeding.
+2. **Step 2 -- Generate summary**: Click the "Generate" button. The output includes:
+   - **Key Findings**: 5-10 bullet points with specific citations [brackets] to source articles.
+   - **Overall Summary**: A concise narrative of the situation.
+   - **Excluded Articles**: A transparent list of articles that were retrieved but excluded for not matching the strict filtering criteria (with reasons).
 
 **Configuration options**:
-- **Focus Topic/Keyword**: Narrows the article retrieval to those most relevant to your query.
-- **Region/District Focus**: Instructs the AI to center its analysis on a specific geographic area.
-- **Model selection**: gpt-4o-mini is the most cost-effective; gpt-4o produces higher-quality output at higher cost.
+- **Focus Topic/Keyword**: Narrows retrieval to relevant themes.
+- **Region/District Focus**: Centers analysis on a specific geographic area (supports state-to-county expansion).
+- **Model selection**: `gpt-4o-mini` is fast and cost-effective; `gpt-4o` provides superior analytical depth for complex documents.
 
 ---
 
@@ -168,8 +175,8 @@ The RAG+LLM summary feature uses the OpenAI API, which incurs token-based costs.
 
 5. **Treat labels as screening categories.** Do not assume that all articles under a given label are equally relevant, or that the label system captures all relevant articles. When precision matters, use the Article Browser to read the actual texts.
 
-6. **Keep token costs in mind.** Always run the cost estimation before generating a summary. For routine analysis, the gpt-4o-mini model with 15 articles is a good balance of quality and cost.
+6. **Keep token costs in mind.** Always run the cost estimation before generating a summary. The switch to **full article text** means higher token usage per query compared to previous versions. The `gpt-4o-mini` model with 15 articles remains a good balance of quality and cost.
 
 ---
 
-*This guide was prepared for IPC analysts working on South Sudan. For technical questions about the platform, refer to the README_SETUP.md file in the project directory.*
+*This guide was prepared for IPC analysts working on South Sudan. For technical questions or data issues, please contact the development team. Data is automatically loaded from external sources (GitHub Releases/Wasabi) on first run.*
