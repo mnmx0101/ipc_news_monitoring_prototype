@@ -92,3 +92,7 @@ Thumbs.db
 *.synctex.gz
 *.fdb_latexmk
 *.fls
+
+# User Guide Presentation Files
+user_guide_presentation.*
+USER_GUIDE.pdf
