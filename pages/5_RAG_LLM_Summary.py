@@ -71,7 +71,7 @@ def retrieve_top_k(df, query, top_k=15):
     scored = df.copy()
     scored["_score"] = scored.apply(
         lambda r: keyword_score(
-            str(r.get("title", "")) + " " + str(r.get("paragraphs_cleaned", "")),
+            str(r.get("title", "")) + " " + str(r.get("paragraphs", "")),
             q_terms
         ),
         axis=1
@@ -79,8 +79,8 @@ def retrieve_top_k(df, query, top_k=15):
     return scored.sort_values(["_score", "date"], ascending=[False, False]).head(top_k)
 
 
-def build_prompt(context_df, context_str, date_range, region_focus):
-    """Build the LLM prompt from retrieved articles."""
+def build_prompt(context_df, context_str, date_range, region_focus, topic_keyword):
+    """Build the LLM prompt from retrieved articles with strict filtering."""
     docs = []
     for i, (_, r) in enumerate(context_df.iterrows()):
         url = r.get("url", "")
@@ -90,16 +90,43 @@ def build_prompt(context_df, context_str, date_range, region_focus):
             f"Region: {r['adm1_name_final']} | County: {r['adm2_name_final']} | "
             f"Label: {r['Label']} | "
             f"Title: {r['title']}{url_str}\n"
-            f"Text: {str(r.get('paragraphs_cleaned', ''))[:800]}"
+            f"Text: {str(r.get('paragraphs', ''))}"
         )
     docs_text = "\n\n".join(docs)
 
-    region_instruction = ""
+    # Build strict filtering instructions
+    filter_requirements = []
     if region_focus and region_focus.strip():
-        region_instruction = f"""
-CRITICAL FOCUS: The summary MUST primarily focus on events and situations in **{region_focus.strip()}**.
-Only include information from other areas if it directly affects {region_focus.strip()}.
-When citing events, always specify whether they occurred in or relate to {region_focus.strip()}.
+        filter_requirements.append(f"Region/Location: **{region_focus.strip()}**")
+    if topic_keyword and topic_keyword.strip():
+        filter_requirements.append(f"Topic/Keyword: **{topic_keyword.strip()}**")
+    
+    strict_filter_instruction = ""
+    if filter_requirements:
+        filter_list = "\n".join([f"  - {req}" for req in filter_requirements])
+        strict_filter_instruction = f"""
+🚨 STRICT FILTERING REQUIREMENTS 🚨
+You MUST ONLY include information that matches ALL of the following criteria:
+{filter_list}
+
+MATCHING RULES (FLEXIBLE):
+- Use CASE-INSENSITIVE matching (e.g., "Juba" matches "juba", "JUBA", "Juba")
+- Use PARTIAL matching (e.g., "Juba" matches "Juba County", "near Juba", "Juba area", "Juba region")
+- For regions: Check if the article text CONTAINS the region name (case-insensitive)
+- For topics: Check if the article RELATES to the topic (keywords, themes, context)
+
+CRITICAL RULES:
+1. If an article does NOT contain the specified region/location name (case-insensitive), EXCLUDE it entirely.
+2. If an article does NOT relate to the specified topic/keyword, EXCLUDE it entirely.
+3. Only use FACTS explicitly stated in the articles - NO speculation, NO inference, NO assumptions.
+4. If you exclude articles, you MUST list them at the end under "Excluded Articles" with brief reasons.
+5. If NO articles match the criteria, state clearly: "No articles match the specified region and topic criteria."
+"""
+    else:
+        strict_filter_instruction = """
+CRITICAL RULES:
+1. Only use FACTS explicitly stated in the articles - NO speculation, NO inference, NO assumptions.
+2. If information is limited or unclear, state this explicitly.
 """
 
     prompt = f"""You are a humanitarian crisis analyst. Based ONLY on the following news reports,
@@ -107,25 +134,28 @@ provide a situation summary.
 
 Focus Context: {context_str}
 Time Period: {date_range[0]} to {date_range[1]}
-{region_instruction}
+{strict_filter_instruction}
 REPORTS:
 {docs_text}
 
 INSTRUCTIONS:
-1. Provide 5-10 bullet points, each summarizing a key finding or event.
-2. For EACH bullet point, cite the source article number(s) in square brackets, e.g. [1], [3,5].
-3. After the bullet points, provide a 2-3 sentence overall summary paragraph.
-4. Cite specific dates and locations when mentioned.
-5. Note any emerging patterns or escalations.
-6. Be factual and avoid speculation.
-7. If information is limited or conflicting, say so explicitly.
-8. Ensure the generated summary truly reflects the specific geographic and thematic focus provided.
+1. FIRST, review each article and determine if it matches the filtering requirements above.
+2. ONLY include articles that match ALL specified criteria (region AND topic if both provided).
+3. Provide 5-10 bullet points from MATCHING articles only, each summarizing a key finding or event.
+4. For EACH bullet point, cite the source article number(s) in square brackets, e.g. [1], [3,5].
+5. After the bullet points, provide a 2-3 sentence overall summary paragraph.
+6. Cite specific dates and locations when mentioned.
+7. Be factual - only state what is explicitly mentioned in the articles.
+8. At the END, list "Excluded Articles" - any articles that did not match the criteria with brief reasons.
 
 FORMAT:
 * **Key Finding**: Description... [article numbers]
 * ...
 
 **Overall Summary**: ...
+
+**Excluded Articles**: 
+- [article number]: Reason (e.g., "Does not mention {region_focus}", "Not related to {topic_keyword}")
 """
     return prompt, docs_text
 
@@ -216,10 +246,10 @@ if st.button("Estimate Input Tokens and Cost", key="p5_estimate"):
                 context_parts.append(f"Topic: {topic_keyword}")
             context_str = "; ".join(context_parts) if context_parts else "General coverage"
 
-            prompt, docs_text = build_prompt(context_df, context_str, date_range, region_focus)
+            prompt, docs_text = build_prompt(context_df, context_str, date_range, region_focus, topic_keyword)
 
-            input_tokens = estimate_tokens(prompt) + 80
-            output_tokens_est = 1000
+            input_tokens = estimate_tokens(prompt) + 200  # Increased buffer for full text
+            output_tokens_est = 1500  # Increased for more comprehensive summaries
 
             pricing = MODEL_PRICING.get(model, {"input": 0, "output": 0})
             input_cost = (input_tokens / 1_000_000) * pricing["input"]
@@ -287,7 +317,7 @@ else:
                                 },
                                 {"role": "user", "content": prompt}
                             ],
-                            max_tokens=1000,
+                            max_tokens=1500,  # Increased for full article text
                             temperature=0.3
                         )
 
@@ -337,15 +367,3 @@ else:
 
                     except Exception as e:
                         st.error(f"LLM Error: {e}")
-
-# Download button
-if not filtered_df.empty:
-    st.sidebar.markdown("---")
-    csv = filtered_df.to_csv(index=False).encode('utf-8')
-    st.sidebar.download_button(
-        "Download Scoped Data",
-        csv,
-        "rag_scoped_articles.csv",
-        "text/csv",
-        key="p5_download"
-    )

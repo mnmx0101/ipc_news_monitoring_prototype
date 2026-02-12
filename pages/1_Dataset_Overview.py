@@ -220,15 +220,3 @@ else:
         include false positives or false negatives.
         """)
         st.dataframe(get_taxonomy_table(), use_container_width=True, hide_index=True)
-
-# Download button
-if not filtered_df.empty:
-    st.sidebar.markdown("---")
-    csv = filtered_df.to_csv(index=False).encode('utf-8')
-    st.sidebar.download_button(
-        "Download Filtered Data",
-        csv,
-        "filtered_articles.csv",
-        "text/csv",
-        key="overview_new_download"
-    )

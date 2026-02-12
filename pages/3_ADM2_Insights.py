@@ -313,15 +313,3 @@ else:
                 with col4:
                     st.metric("Alert / Alarm", f"{latest['threshold_1sd']:.1f} / {latest['threshold_2sd']:.1f}")
                     st.caption("Thresholds: 12M Mean+1SD / +2SD")
-
-# Download button
-if not filtered_df.empty:
-    st.sidebar.markdown("---")
-    csv = filtered_df.to_csv(index=False).encode('utf-8')
-    st.sidebar.download_button(
-        "Download Filtered Data",
-        csv,
-        "adm2_filtered_articles.csv",
-        "text/csv",
-        key="adm2_new_download"
-    )

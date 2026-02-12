@@ -124,15 +124,3 @@ else:
         {clean_text}
     </div>
     """, unsafe_allow_html=True)
-
-# Download button
-if not filtered_df.empty:
-    st.sidebar.markdown("---")
-    csv = filtered_df.to_csv(index=False).encode('utf-8')
-    st.sidebar.download_button(
-        "Download Filtered Data",
-        csv,
-        "browser_filtered_articles.csv",
-        "text/csv",
-        key="p4_download"
-    )
