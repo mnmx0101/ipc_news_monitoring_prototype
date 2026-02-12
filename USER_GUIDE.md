@@ -143,12 +143,28 @@ The page shows comparative views for each topic label:
 
 Please keep the following limitations in mind when interpreting results from this platform:
 
+### Geolocation Limitations
+Articles are georeferenced using automated Named Entity Recognition (NER) to identify place names mentioned in the text. This approach has inherent limitations:
+
+- **Incomplete Coverage**: Not all articles contain explicit geographic references. Articles discussing national-level policies or general themes may not mention specific states or counties, resulting in "Unknown Region" or "Unknown County" classifications.
+- **Ambiguous References**: Some place names may be ambiguous or refer to multiple locations. The georeferencing system attempts to resolve these based on context, but errors can occur.
+- **Indirect References**: Articles about events affecting a region may not explicitly name that region (e.g., "the capital" instead of "Juba"), leading to missed geolocations.
+
+As a result, the geographic distribution shown in the dashboard represents articles that could be successfully georeferenced, not the complete universe of coverage for each region.
+
 ### Article Labels Are Approximate
 The topic labels (Conflict and Violence, Food Crisis, Political Instability, etc.) are assigned using a keyword-based taxonomy adapted from the following research:
 
 > Ananth Balashankar et al., Predicting food crises using news streams. *Sci. Adv.* 9, eabm3449 (2023). DOI: 10.1126/sciadv.abm3449
 
-The process works by georeferencing each article and then scanning the relevant text segments around each geolocation for topic keywords (lemmatized unigrams). This approach is practical and scalable, but it will produce some false positives (articles labeled with a topic they do not substantively cover) and false negatives (relevant articles missed because they use different vocabulary).
+The process works by georeferencing each article and then scanning the relevant text segments around each geolocation for topic keywords (lemmatized unigrams). **This taxonomy is not exhaustive** and is designed to capture major humanitarian themes relevant to food security analysis. Important limitations include:
+
+- **False Positives**: Articles may be labeled with a topic they do not substantively cover if they happen to mention a keyword in passing.
+- **False Negatives**: Relevant articles may be missed if they use different vocabulary not included in the taxonomy.
+- **Limited Scope**: The taxonomy focuses on humanitarian and food security themes. Other important topics (e.g., education, infrastructure) are not systematically captured.
+- **Single-Label Assignment**: Articles discussing multiple themes are assigned to the category with the highest keyword match, which may not reflect the article's primary focus.
+
+For the complete keyword taxonomy used for labeling, see **Appendix A** at the end of this guide.
 
 ### Rising Baseline in Article Volume
 The overall volume of articles in the dataset is increasing over time across most topics. This means that the static threshold (full-span mean) will tend to flag more recent periods as alerts or alarms simply because there are more articles being published. The dynamic threshold (12-month rolling mean) partially addresses this by comparing each period against only the recent past. In general, this tool is most useful for **forward-looking analysis**: identifying periods where coverage spikes beyond what recent history would predict.
@@ -181,3 +197,25 @@ The RAG+LLM summary feature uses the OpenAI API, which incurs token-based costs.
 ---
 
 *This guide was prepared for IPC analysts working on South Sudan. For technical questions or data issues, please contact the development team. Data is automatically loaded from external sources (GitHub Releases/Wasabi) on first run.*
+
+---
+
+## Appendix A: Keyword Taxonomy for Article Labeling
+
+The following table shows the complete keyword taxonomy used to assign topic labels to articles. Articles are labeled by matching **lemmatized unigrams** from the article text against these keywords.
+
+| Category | Keywords |
+|----------|----------|
+| **Conflict and Violence** | conflict, war, fighting, battle, violence, clash, attack, military, armed, rebel, soldier, security, bomb, shell, shooting, insurgent, terror, terrorism, casualty, hostage, airstrike |
+| **Political Instability** | political, government, protest, demonstration, election, coup, instability, corruption, parliament, opposition, governance, policy, minister, president, cabinet, regime, referendum |
+| **Economic Issues** | price, inflation, economy, economic, market, trade, currency, poverty, unemployment, growth, debt, finance, livelihood, wage, budget, gdp, cost, commodity, imports, exports |
+| **Weather Conditions** | drought, rain, rainfall, storm, cyclone, hurricane, typhoon, flood, flooding, weather, climate, temperature, heatwave, monsoon |
+| **Production Shortage** | harvest, production, yield, crop, crops, planting, farming, agriculture, livestock, pasture, supply, shortage, output, seed, fertilizer |
+| **Humanitarian Aid** | aid, relief, assistance, humanitarian, donor, funding, wfp, unhcr, unicef, ngo, distribution, support, msf, red cross, icrc |
+| **Food Crisis** | food, famine, hunger, nutrition, malnutrition, insecurity, ipc, starvation, hungry |
+| **Land-related Issues** | land, tenure, dispute, boundary, eviction, pastoralist, grazing, farmland, property, encroachment |
+| **Forced Displacements** | displacement, displaced, refugee, refugees, idp, idps, migrant, migration, camp, camps, asylum, relocation, returnee, returnees |
+| **Pests and Diseases** | locust, pest, pests, disease, diseases, outbreak, cholera, malaria, ebola, measles, covid, virus, infection, armyworm, pandemic |
+| **Environment Issues** | environment, environmental, deforestation, erosion, pollution, biodiversity, conservation, desertification, degradation, wildfire, climate, greenhouse |
+
+**Note**: This taxonomy is adapted from Balashankar et al. (2023) and focuses on humanitarian themes relevant to food security monitoring. It is not exhaustive and may not capture all relevant articles or themes.
